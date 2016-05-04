@@ -13,10 +13,11 @@ def filenameToLines(filename):
 def lastWords(lines):
     ret = []
     for line in lines:
-        line = line.split()
-        word = line[-1]
-        #remove all non alphas from word
-        regex = re.compile('[^a-zA-Z]')
-        word = regex.sub('', word)
-        ret.append(word)
+        if line != "":
+            line = line.split()
+            word = line[-1]
+            #remove all non alphas from word
+            regex = re.compile('[^a-zA-Z]')
+            word = regex.sub('', word)
+            ret.append(word)
     return ret

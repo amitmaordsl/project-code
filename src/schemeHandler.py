@@ -2,6 +2,7 @@ import collections
 import json
 
 from APIFunctions import rhymesFromWord
+from errorMessages import didNotMatchScheme, notSameLetters, someLinesNotParsed
 
 # Check if the form contains appropriate parentheticals and only alphanumerics otherwise
 def checkValidForm(form):
@@ -10,15 +11,17 @@ def checkValidForm(form):
         openParen = form.find("(")
         # no parens
         if (closeParen == -1 and openParen == -1):
+            print "Valid rhyme scheme!"
             return True
         # only one paren
-        if (closeParen == -1 or openParen == -1) or (closeParen > openParen):
-            print "Invalid form! Not all parentheses closed"
+        if (closeParen == -1 or openParen == -1) or (closeParen < openParen):
+            print "Invalid rhyme scheme! Not all parentheses closed"
             return False
         if (closeParen - openParen <=1):
-            print "Invalid form! Parenthesis with nothing inside."
+            print "Invalid rhyme scheme! Parenthesis with nothing inside."
             return False
         form = form[:openParen] + form[closeParen+1:]
+    return True
 
 # Check number of lines!
 # Only works if there is a single parenthesized segment
@@ -27,23 +30,30 @@ def checkLines(poemScheme, pattern):
     noParenTotal = 0
     listOfMods = list()
 
-    while not (not pattern):
-        # run into paren
-        if pattern[0] == '(':
-            closeParen = pattern.find(")")
-            modVal = len(pattern[1:closeParen])
-            listOfMods.append(modVal)
-            pattern = pattern[closeParen+1:]
-        else:
-            firstParen = pattern.find("(")
-            noParenTotal = noParenTotal + firstParen
-            pattern = pattern[firstParen:]
-            
-    numLinesforMod = (len(poemScheme) - noParenTotal)
-    for val in listOfMods:
-        numLinesforMod = numLinesforMod % val
+    #no parens
+    if pattern.find('(') == -1:
+        linesBool = (len(poemScheme) == len(pattern))
+    
+    #at least one paren
+    else:
+        while not (not pattern):
 
-    linesBool = (numLinesforMod == 0)
+            # run into paren
+            if pattern[0] == '(':
+                closeParen = pattern.find(')')
+                modVal = len(pattern[1:closeParen])
+                listOfMods.append(modVal)
+                pattern = pattern[closeParen+1:]
+            else:
+                firstParen = pattern.find('(')
+                noParenTotal = noParenTotal + firstParen
+                pattern = pattern[firstParen:]
+                
+        numLinesforMod = (len(poemScheme) - noParenTotal)
+        for val in listOfMods:
+            numLinesforMod = numLinesforMod % val
+
+        linesBool = (numLinesforMod == 0)
     if linesBool:
         print "Correct number of lines for specified rhyme scheme."
         return True
@@ -86,7 +96,7 @@ def createScheme(schemeDict, words):
 
     for word in words:
         count += 1
-        print count 
+        print "Checking rhymes for line number " + str(count) 
         # did the word match a rhyme higher in the poem
         trackerHit = False
         # char to be used if a match is found
@@ -112,8 +122,8 @@ def createScheme(schemeDict, words):
 ### takes the pattern as parsed by schemehandler, and checks that it matches against what it should
 ###############
 def schemeParser(schemeDict, pattern, parsedPattern, lastWordsList):
-    if not checkSameLetters(pattern, parsedPattern):
-        return schemeDict
+    # if not checkSameLetters(pattern, parsedPattern):
+    #     return schemeDict
     
     patternCopy = pattern
     parsedPatternIndex = 0
@@ -137,7 +147,8 @@ def schemeParser(schemeDict, pattern, parsedPattern, lastWordsList):
                 parsedPattern = parsedPattern[1:]
                 parsedPatternIndex = parsedPatternIndex + 1
             else:
-                didNotMatchScheme(parsedPatternIndex, lastWordsList, pattern, schemeDict)
+                rhymeList = ', '.join(rhymeListFromWordShort(schemeDict[pattern[0]]))
+                didNotMatchScheme(parsedPatternIndex, lastWordsList, pattern, schemeDict, rhymeList)
                 return schemeDict
     if parsedPattern:
         someLinesNotParsed(parsedPatternIndex, lastWordsList, schemeDict)
@@ -147,6 +158,9 @@ def schemeParser(schemeDict, pattern, parsedPattern, lastWordsList):
         print "The poem matches the scheme! Great work!"
         return schemeDict
 
+# a function that checks if the number of unique letters in the pattern matches the scheme.
+# this is a good speed boost but makes it harder to provide good feedback.
+# it's currently commented out in schemeParser, to show how it would be used if added back in 
 def checkSameLetters(pattern, parsedPattern):
     sortedPattern = ''.join(sorted(pattern))
     sortedParsedPattern = ''.join(sorted(parsedPattern))
@@ -154,23 +168,5 @@ def checkSameLetters(pattern, parsedPattern):
     if sortedPattern[-1] == sortedParsedPattern[-1]:
         return True
     else:
-        notSameLetters(pattern, sortedParsedPattern)
+        notSameLetters(pattern, parsedPattern)
 
-#### ERROR MESSAGES ####
-def didNotMatchScheme(parsedPatternIndex, lastWordsList, pattern, schemeDict):
-    print "Poem did not match specified scheme!"
-    print "Incorrect line is line " + str(parsedPatternIndex + 1) + ", with last word: " + lastWordsList[parsedPatternIndex]
-    print "The scheme expects the word to match the '" + pattern[0] + "' rhyme pattern"
-    print "As such, the last word on the line should rhyme with " + schemeDict[pattern[0]]
-    print "Here are some rhyme suggestions that match with that word: " 
-    print ', '.join(rhymeListFromWordShort(schemeDict[pattern[0]]))
-    print "Current letter assignments:", json.dumps(schemeDict, indent=4)
-
-def notSameLetters(pattern, sortedParsedPattern):
-    print "Poem cannot match specified scheme! The poem and scheme do not expect the same number of unique rhymes!"
-    print "The expected rhyme scheme is " + pattern + ", and the poem was determined to have scheme " + sortedParsedPattern
-
-def someLinesNotParsed(parsedPatternIndex, lastWordsList, schemeDict):
-    print "Poem did not match specified scheme! Some lines not parsed!"
-    print "The first line not parsed is line " + str(parsedPatternIndex + 1) + ", with last word: " + lastWordsList[parsedPatternIndex]
-    print "the current letter assignments are: ", json.dumps(schemeDict, indent=4)

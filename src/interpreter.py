@@ -15,9 +15,16 @@ class Interpreter(object):
     ###############
     ## for checking a pattern that is input manually by the user
     def checkPattern(self, filename, pattern):
+        # Clear the dictionary
+        self.schemeDict = collections.OrderedDict()
+
         # take the filename and open it into lines, then last words of lines
         lines = filenameToLines(filename)
         lastWordsList = lastWords(lines)
+
+        # check valid form!
+        if not checkValidForm(pattern):
+            return
 
         # check lines!!
         if not checkLines(lastWordsList, pattern):
@@ -33,11 +40,14 @@ class Interpreter(object):
 
         # parse through and determine if the 
         self.schemeDict = schemeParser(self.schemeDict, pattern, poemScheme, lastWordsList)
-        return ''
+        return ""
 
     def checkForm(self, filename, formName):
-        pattern = self.formDict[formName]
-        self.checkPattern(filename, pattern)
+        if formName in self.formDict:
+            pattern = self.formDict[formName]
+            self.checkPattern(filename, pattern)
+        else:
+            print "Specified scheme " + formName + " not found!"
 
     # Add a scheme to our formDict!
     def addForm(self, form, formName):
@@ -48,9 +58,12 @@ class Interpreter(object):
             print "Could not add form."
 
 if __name__ == '__main__':
+    #initizlize the interpreter
     interpreter = Interpreter()
-    # print "checking how now brown cow on aaba"
-    # print(interpreter.checkPattern("tmp.txt", r'a(ab)(ab)'))
-    interpreter.addForm(r'ababcdcdefefgg', 'sonnet')
-    # print "checking a sonnet is a sonnet"
-    # print(interpreter.checkForm("sonnet.txt", 'sonnet'))
+    # a simple poem, failing because the rhyme scheme doesn't match
+    interpreter.addForm("aaba", "simpleForm")
+    print "checking how now brown cow on aaba"
+    print(interpreter.checkForm("simple.txt", "simpleForm"))
+    # a sonnet, matching a "regex-y" specified scheme which can match sonnets
+    # interpreter.addForm(r'(ab)(cd)(ef)(g)', "sonnet")
+    # print(interpreter.checkForm("presentation.txt", 'sonnet'))
